@@ -92,3 +92,30 @@ More advanced approaches, such as learning-based lane detection methods, could f
 
 All input images and videos are tested as well, final results are available at the following link:
 https://drive.google.com/file/d/19Dg-dA0cYWxRH6yDHZzJ2oJLJajfDf5L/view?usp=drive_link
+
+## Dependencies
+
+This project is written in C++ and uses OpenCV for image processing and computer vision operations.
+
+Required dependencies:
+
+- C++17-compatible compiler
+- CMake 3.10 or newer
+- OpenCV 4.x
+
+On Ubuntu/Debian-based systems, OpenCV and CMake can be installed with:
+
+```bash
+sudo apt update
+sudo apt install build-essential cmake libopencv-dev
+```
+
+## Build
+
+Create a clean build directory and compile the project with CMake:
+
+```bash
+mkdir -p build
+cd build
+cmake ..
+make
