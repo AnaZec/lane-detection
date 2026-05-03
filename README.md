@@ -31,18 +31,35 @@ The demo below shows the processed video output with the detected lane area, est
 
 The processing flow is:
 
-```text
-Input frame
-→ camera undistortion
-→ CLAHE illumination normalization
-→ color + gradient thresholding
-→ binary lane mask
-→ perspective transform
-→ sliding-window lane search
-→ polynomial fitting
-→ sanity checks + temporal smoothing
-→ curvature and offset estimation
-→ final lane overlay
+
+with this:
+
+````md
+```mermaid
+flowchart TD
+    A[Raw camera frame] --> B[Camera calibration data]
+    B --> C[Undistort frame]
+
+    C --> D[CLAHE illumination normalization]
+    D --> E[Color thresholding<br/>white + yellow lane masks]
+    D --> F[Sobel-x gradient thresholding]
+    E --> G[Combined binary lane mask]
+    F --> G
+
+    G --> H[Perspective transform<br/>bird's-eye view]
+    H --> I[Histogram + sliding-window search]
+    I --> J[Second-order polynomial lane fit]
+
+    J --> K{Geometric sanity checks}
+    K -- valid --> L[Temporal smoothing<br/>with previous valid fit]
+    K -- invalid + previous fit exists --> M[Fallback to previous lane fit]
+    K -- invalid + no previous fit --> N[Failure overlay]
+
+    L --> O[Curvature estimation]
+    M --> O
+    O --> P[Vehicle offset estimation]
+    P --> Q[Inverse perspective transform]
+    Q --> R[Final lane overlay]
 ```
 
 ## Camera Calibration
