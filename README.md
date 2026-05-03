@@ -1,32 +1,59 @@
-**Lane Finding Project**
+# Lane Detection and Vehicle Offset Estimation Pipeline
 
-The goals / steps of this project are the following:
+C++/OpenCV lane detection pipeline that performs camera calibration, undistortion, lane-mask generation, perspective transformation, polynomial lane fitting, curvature estimation, and vehicle offset tracking.
 
-* Compute the camera calibration matrix and distortion coefficients given a set of chessboard images.
-* Apply a distortion correction to raw images.
-* Use color transforms, gradients, etc., to create a thresholded binary image.
-* Apply a perspective transform to rectify binary image ("birds-eye view").
-* Detect lane pixels and fit to find the lane boundary.
-* Determine the curvature of the lane and vehicle position with respect to center.
-* Warp the detected lane boundaries back onto the original image.
-* Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
+The project demonstrates a classical computer vision perception pipeline similar to the early stages of an autonomy camera-processing stack.
 
 ## Demo
 
+The demo below shows the processed video output with the detected lane area, estimated curvature, and vehicle offset overlaid on each frame.
+
 ![Lane detection demo](docs/assets/lane-detection-demo.gif)
 
-### Writeup / README
+## Features
 
-### Camera Calibration
+- Camera calibration from chessboard images
+- Lens distortion correction
+- CLAHE-based illumination normalization for improved thresholding under shadows
+- White/yellow lane color thresholding
+- Sobel-x gradient edge detection
+- Perspective transform to bird's-eye view
+- Histogram + sliding-window lane pixel search
+- Second-order polynomial lane fitting
+- Temporal smoothing across video frames
+- Geometric sanity checks for implausible lane fits
+- Fallback to previous valid lane fit on failed detections
+- Lane curvature estimation in meters
+- Vehicle lateral offset estimation in meters
+- Intermediate debug outputs for pipeline inspection
 
-Camera calibration was performed using multiple images of a chessboard pattern. 
-For each calibration image, chessboard corner points were detected and associated with their corresponding 3D object points, assuming the chessboard lies on a flat planar surface.
-Using these 2D–3D point correspondences, the camera matrix and lens distortion coefficients were computed using OpenCV calibration routines. 
-The resulting parameters were saved to a YAML file and reused to undistort all subsequent images and video frames.
+## Pipeline Overview
 
-A distortion-corrected calibration image was generated to verify that straight lines in the scene remain straight after correction.
+The processing flow is:
 
-#### Undistortion Comparison
+```text
+Input frame
+→ camera undistortion
+→ CLAHE illumination normalization
+→ color + gradient thresholding
+→ binary lane mask
+→ perspective transform
+→ sliding-window lane search
+→ polynomial fitting
+→ sanity checks + temporal smoothing
+→ curvature and offset estimation
+→ final lane overlay
+```
+
+## Camera Calibration
+
+Camera calibration is performed using multiple images of a chessboard pattern.
+
+For each calibration image, chessboard corner points are detected and matched with their corresponding 3D object points, assuming the chessboard lies on a flat planar surface. These 2D–3D point correspondences are used to compute the camera matrix and lens distortion coefficients with OpenCV calibration routines.
+
+The resulting calibration parameters are saved and reused to undistort all subsequent images and video frames before lane detection.
+
+### Undistortion Comparison
 
 The calibration parameters are used to remove lens distortion before lane detection. The comparison below shows the original frame and the corresponding undistorted output.
 
@@ -34,47 +61,69 @@ The calibration parameters are used to remove lens distortion before lane detect
 |---|---|
 | ![Raw frame before undistortion](docs/assets/undistortion/raw-frame.jpg) | ![Undistorted frame](docs/assets/undistortion/undistorted-frame.jpg) |
 
-### Pipeline (single images)
+## Image Processing Pipeline
 
-Each input image is first undistorted using the previously computed camera matrix and distortion coeffficients. 
-This step removes lens distortion and ensures that straight lane markings appear straight in the image.
+### 1. Undistortion
 
-An example of a distortion-corrected image is shown below.
+Each input image is first undistorted using the previously computed camera matrix and distortion coefficients. This step reduces lens distortion so that lane geometry can be interpreted more reliably in later stages.
 
-![Distortion-corrected image](docs/assets/pipeline-stages/01-undistorted.jpg)
+### 2. Binary Thresholding
 
-To create a thresholded binary image highlighting lane markings, a combination of color-based and gradient-based methods is used.
-This step is implemented in the function `thresholdBinary()` located in the module `src/threshold.cpp`. This function takes the undistorted input image and applies multiple thresholding operations to extract lane-relevant pixels.
+The thresholding stage is implemented in `thresholdBinary()` in `src/threshold.cpp`.
 
-Within `thresholdBinary()`, the image is converted into different color spaces to emphasize white and yellow lane markings under varying illumination conditions. In parallel, Sobel gradients are computed in the x-direction to detect strong vertical edges corresponding to lane boundaries. The resulting color masks and gradient masks are then combined into a single binary image.
+To highlight lane markings, the pipeline combines color-based and gradient-based masks:
+
+- HLS-based white lane detection
+- HSV-based yellow lane detection
+- Sobel-x gradient thresholding for strong vertical edges
 
 To improve robustness under shadows and uneven illumination, the thresholding stage applies CLAHE to the HLS lightness channel before generating color and gradient masks. This locally normalizes contrast so lane markings remain more visible in darker road regions while preserving the existing white/yellow lane detection logic.
 
-An example of the resulting binary image is shown below.
+### 3. Perspective Transform
 
-![Binary image example](docs/assets/pipeline-stages/02-binary.jpg)
+The binary lane mask is warped into a bird's-eye view using `warpPerspectiveBinary()` in `src/pipeline.cpp`.
 
-A perspective (bird’s-eye view) transform is applied to the thresholded binary image to simplify lane detection.
-This step is implemented in the function `warpPerspectiveBinary()` located in the module `src/pipeline.cpp`. 
-The source points define a trapezoidal region around the lane in the original camera view, while the destination points map this region to a rectangular area in the warped image. This transformation makes the left and right lane lines appear approximately vertical and parallel, which greatly simplifies lane pixel detection and polynomial fitting. The inverse perspective matrix is also computed in the same module and later used to project the detected lane area back onto the original image.
+The source points define a trapezoidal lane region in the original camera view, while the destination points map that region into a rectangular top-down view. This makes the left and right lane lines appear more vertical and approximately parallel, which simplifies lane pixel detection and polynomial fitting.
 
-An example of the perspective-transformed (warped) binary image is shown below.
+The inverse perspective matrix is later used to project the detected lane area back onto the original image.
 
-![Perspective transform example](docs/assets/pipeline-stages/03-warped-binary.jpg)
+### 4. Lane Pixel Detection and Polynomial Fitting
 
-Lane-line pixels are identified in the warped binary image using a histogram + sliding-window search, and the lane boundaries are then fit with a 2nd-order polynomial.
+Lane detection is implemented in `detectLane()` in `src/lane_detect.cpp`.
 
-Lane pixel detection and polynomial fitting are implemented in the function `detectLane()` in the module `src/lane_detect.cpp`. This function:
-- computes an x-axis histogram over the bottom half of the warped binary image to find the initial left and right lane base positions,
-- collects all non-zero pixels using `cv::findNonZero`,
-- runs a vertical sliding-window scan (with parameters `nwindows`, `margin`, `minpix`) to accumulate left/right lane pixel coordinates and recenters each window based on the mean x-position of pixels found in the window,
-- fits a 2nd-order polynomial `x = A*y^2 + B*y + C` for the left and right lanes using the helper function `polyfit_x_of_y()` (also in `src/lane_detect.cpp`),
-- applies geometric sanity checks, including left/right lane ordering, minimum and maximum lane-width bounds, lane-width consistency across the image, and curvature-coefficient similarity between the two fitted lane lines
-- falls back to the previous valid lane fit when the current frame fails validation, preventing a single bad frame from causing an immediate failure overlay in video output
+The detector:
 
-The lane detection stage is called from the main frame-processing function `processFrame()` in `src/pipeline.cpp`, which passes the warped binary image into `detectLane()` and then uses the fitted polynomials for lane visualization and further metrics.
+- computes an x-axis histogram over the bottom half of the warped binary image,
+- finds initial left and right lane base positions,
+- collects non-zero pixels using `cv::findNonZero`,
+- runs a vertical sliding-window search using `nwindows`, `margin`, and `minpix`,
+- recenters each window based on the mean x-position of detected lane pixels,
+- fits second-order polynomials of the form `x = A*y^2 + B*y + C`,
+- applies geometric sanity checks for lane width, lane ordering, width consistency, and curvature-coefficient similarity,
+- smooths valid detections using the previous frame fit,
+- supports pipeline-level fallback to the previous valid fit when the current detection fails.
 
-### Intermediate Stage Gallery
+### 5. Curvature and Vehicle Offset Estimation
+
+After fitting the left and right lane polynomials, the pipeline estimates:
+
+- lane curvature in meters,
+- vehicle lateral offset from the lane center in meters.
+
+Curvature is computed from the fitted polynomial coefficients after converting pixel-space measurements into approximate real-world units. Vehicle offset is computed by comparing the detected lane center near the bottom of the image with the image center, which is treated as the vehicle center.
+
+### Example Curvature and Offset Output
+
+For one processed test frame, the pipeline reports:
+
+| Output | Example value | Meaning |
+|---|---:|---|
+| Lane curvature | `1597 m` | Estimated radius of curvature of the detected lane. A larger value means the road is closer to straight; a smaller value means a sharper curve. |
+| Vehicle offset | `-0.27 m` | Estimated lateral displacement of the vehicle from the lane center. In this project, a negative value means the vehicle is left of the detected lane center, while a positive value means it is right of the lane center. |
+
+These values are approximate geometry estimates derived from the detected lane polynomials. They are intended to provide a useful interpretation of the lane geometry, not high-precision vehicle localization.
+
+## Intermediate Stage Gallery
 
 The following images show the main processing stages for one test frame.
 
@@ -85,34 +134,194 @@ The following images show the main processing stages for one test frame.
 | Bird's-eye binary view | ![Warped binary view](docs/assets/pipeline-stages/03-warped-binary.jpg) |
 | Final lane overlay | ![Final lane overlay](docs/assets/pipeline-stages/04-final-overlay.jpg) |
 
-The radius of curvature of the lane and the vehicle position with respect to the lane center are computed after fitting second-order polynomials to the detected left and right lane lines.
+## Video Pipeline
 
-Curvature is computed in `computeCurvature()` in `src/lane_detect.cpp`. This function takes the fitted polynomial coefficients of a lane line and evaluates the standard curvature formula for a 2nd-order polynomial at a chosen y-position. In addition, the helper `curvatureMeters()` in `src/pipeline.cpp` performs the pixel-to-meter conversion (using meters-per-pixel scaling) and outputs the curvature value in real-world units (meters).
+The same pipeline can be applied frame-by-frame to video input. For video processing, the project maintains lane state across frames using temporal smoothing and fallback behavior.
 
-Vehicle offset from lane center is computed in `computeVehicleOffset()` in `src/lane_detect.cpp`. This function evaluates the left and right lane polynomials near the bottom of the image, computes the lane center as the midpoint between the two lane x-positions, compares it to the image center (assumed vehicle position), and converts the pixel difference into meters to obtain the vehicle’s offset from the lane center.
-
-
-An example image of the final result is shown below, where the detected lane boundaries are projected back onto the original road image and the lane area is highlighted clearly.
-
-![Final lane detection result](docs/assets/pipeline-stages/04-final-overlay.jpg)
-
-### Pipeline (video)
-
-The pipeline processes video frame-by-frame and overlays the detected lane area, estimated lane curvature, and vehicle lateral offset.
+If a frame produces an invalid lane fit, the pipeline reuses the previous valid lane fit when available. This prevents a single bad frame from immediately producing a failure overlay and makes the output more stable.
 
 ![Lane detection demo](docs/assets/lane-detection-demo.gif)
 
+## Robustness Features
 
-### Discussion
+The pipeline includes several robustness improvements beyond a basic sliding-window implementation:
 
-The main challenges encountered during implementation were varying lighting conditions, shadows, and partially worn or occluded lane markings. These factors can reduce the effectiveness of fixed color and gradient thresholds and lead to noisy or incomplete binary images.
+### CLAHE Illumination Normalization
 
-The pipeline is most likely to fail in situations with strong shadows, abrupt illumination changes, heavy occlusions by other vehicles, or non-standard lane markings. In such cases, the sliding-window search and polynomial fitting may produce unstable or incorrect lane estimates.
+CLAHE is applied to the HLS lightness channel before thresholding. This helps lane markings remain visible under shadows and uneven illumination.
 
-The current pipeline improves robustness by applying CLAHE-based illumination normalization before thresholding. Further improvements could include dynamically tuned threshold ranges, shadow-specific masking, or learning-based lane segmentation.
+### Geometric Sanity Checks
 
-More advanced approaches, such as learning-based lane detection methods, could further improve performance in challenging road and lighting conditions.
+Detected polynomial fits are rejected if they violate expected lane geometry. The checks include:
 
-### Other results
+- left/right lane ordering,
+- minimum and maximum lane-width bounds,
+- lane-width consistency across the image,
+- curvature-coefficient similarity between left and right lane fits.
 
-Additional generated outputs are stored locally under `output/` when running the pipeline. The `output/` directory is intentionally ignored by Git to keep the repository lightweight.
+### Temporal Smoothing
+
+When a previous valid fit exists, the current frame's polynomial coefficients are blended with the previous fit using a configurable smoothing factor. This reduces frame-to-frame jitter in video output.
+
+### Fallback to Previous Fit
+
+If the current frame fails validation but a previous valid lane fit exists, the pipeline reuses the previous fit instead of immediately showing a failure message.
+
+## Project Structure
+
+```text
+.
+├── camera_cal/          # Chessboard calibration images
+├── calibration/         # Saved calibration data
+├── include/             # Header files
+├── src/                 # C++ source files
+├── test_images/         # Test input images
+├── docs/assets/         # README demo and visual documentation assets
+├── run_batch.sh         # Batch script for calibration and sample outputs
+├── CMakeLists.txt       # CMake build configuration
+└── README.md
+```
+
+Main modules:
+
+| File | Purpose |
+|---|---|
+| `src/main.cpp` | CLI entry point for calibration, image mode, and video mode |
+| `src/pipeline.cpp` | Main frame-processing pipeline |
+| `src/threshold.cpp` | Binary thresholding and CLAHE preprocessing |
+| `src/perspective.cpp` | Perspective transform utilities |
+| `src/lane_detect.cpp` | Sliding-window search, polynomial fitting, sanity checks, curvature, and offset helpers |
+| `src/calibration.cpp` | Camera calibration and undistortion support |
+
+## Dependencies
+
+This project is written in C++ and uses OpenCV for image processing and computer vision operations.
+
+Required dependencies:
+
+- C++17-compatible compiler
+- CMake 3.10 or newer
+- OpenCV 4.x
+
+On Ubuntu/Debian-based systems, dependencies can be installed with:
+
+```bash
+sudo apt update
+sudo apt install build-essential cmake libopencv-dev
+```
+
+## Build
+
+Create a clean build directory and compile the project with CMake:
+
+```bash
+mkdir -p build
+cd build
+cmake ..
+make
+```
+
+Alternatively, from the repository root:
+
+```bash
+cmake -S . -B build
+cmake --build build
+```
+
+The executable is generated inside the `build/` directory.
+
+## Usage
+
+### Camera Calibration
+
+```bash
+./build/lane_finding --calibrate
+```
+
+This computes the camera calibration parameters from the chessboard images and saves the calibration data for later use.
+
+### Process a Single Image
+
+```bash
+./build/lane_finding --image test_images/test1.jpg
+```
+
+Generated image outputs are written under `output/`.
+
+### Process a Video
+
+```bash
+./build/lane_finding --video input_video.mp4 output_video.avi
+```
+
+Example:
+
+```bash
+./build/lane_finding --video test_videos/project_video01.mp4 output/videos/overlay/project_video01_out.avi
+```
+
+## Batch Run
+
+The repository includes a helper script for running calibration and sample image/video processing:
+
+```bash
+bash run_batch.sh
+```
+
+## Output Artifacts
+
+When the pipeline is run locally, it can generate intermediate and final outputs such as:
+
+```text
+output/images/test1/undistorted.jpg
+output/images/test1/binary.jpg
+output/images/test1/warped_binary.jpg
+output/images/test1/lane_warp.jpg
+output/images/test1/lane_unwarped.jpg
+output/images/test1/result.jpg
+```
+
+The `output/` directory is intentionally ignored by Git. Selected visual assets used by this README are committed separately under `docs/assets/`.
+
+## Limitations
+
+This is a classical computer vision pipeline, so it can still struggle with:
+
+- heavy shadows,
+- worn or missing lane markings,
+- unusual lane colors,
+- strong glare,
+- occlusions by vehicles,
+- complex road geometry,
+- lane merges or exits.
+
+The current implementation improves robustness with CLAHE normalization, geometric validation, temporal smoothing, and fallback behavior, but it is not a replacement for a production-grade autonomy perception system.
+
+## Future Work
+
+Possible improvements include:
+
+- dynamic threshold tuning based on scene brightness,
+- stronger shadow-specific masking,
+- configurable pipeline parameters,
+- test coverage for lane validation logic,
+- real-time performance profiling,
+- ROS 2 integration,
+- camera-device input support,
+- learning-based lane segmentation for difficult scenes.
+
+## Why This Project Matters
+
+This project demonstrates the full path from raw camera input to interpretable lane geometry:
+
+```text
+camera calibration
+→ corrected image
+→ lane mask
+→ bird's-eye view
+→ lane model
+→ curvature and offset estimates
+→ visual overlay
+```
+
+It is intentionally implemented in C++ with OpenCV to show practical computer vision, geometry, and stateful video-processing concepts relevant to camera-based autonomy and embedded perception systems.
