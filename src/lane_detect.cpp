@@ -129,12 +129,22 @@ LaneFit detectLane(const cv::Mat& warpedBinary, LaneState& state,
         return fit;
     }
 
-    fit.left = leftFit;
-    fit.right = rightFit;
+    cv::Vec3d smoothedLeft = leftFit;
+    cv::Vec3d smoothedRight = rightFit;
+
+    if (state.hasPrev) {
+        const double alpha = state.smoothingAlpha;
+
+        smoothedLeft = alpha * leftFit + (1.0 - alpha) * state.leftPrev;
+        smoothedRight = alpha * rightFit + (1.0 - alpha) * state.rightPrev;
+    }
+
+    fit.left = smoothedLeft;
+    fit.right = smoothedRight;
     fit.valid = true;
 
-    state.leftPrev = leftFit;
-    state.rightPrev = rightFit;
+    state.leftPrev = smoothedLeft;
+    state.rightPrev = smoothedRight;
     state.hasPrev = true;
 
     return fit;
