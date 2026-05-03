@@ -26,6 +26,14 @@ The resulting parameters were saved to a YAML file and reused to undistort all s
 
 A distortion-corrected calibration image was generated to verify that straight lines in the scene remain straight after correction.
 
+#### Undistortion Comparison
+
+The calibration parameters are used to remove lens distortion before lane detection. The comparison below shows the original frame and the corresponding undistorted output.
+
+| Raw frame | Undistorted frame |
+|---|---|
+| ![Raw frame before undistortion](docs/assets/undistortion/raw-frame.jpg) | ![Undistorted frame](docs/assets/undistortion/undistorted-frame.jpg) |
+
 ### Pipeline (single images)
 
 Each input image is first undistorted using the previously computed camera matrix and distortion coeffficients. 
