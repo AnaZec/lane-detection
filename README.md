@@ -33,7 +33,7 @@ This step removes lens distortion and ensures that straight lane markings appear
 
 An example of a distortion-corrected image is shown below.
 
-![Distortion-corrected_image](output/images/test1/undistorted.jpg)
+![Distortion-corrected image](docs/assets/pipeline-stages/01-undistorted.jpg)
 
 To create a thresholded binary image highlighting lane markings, a combination of color-based and gradient-based methods is used.
 This step is implemented in the function `thresholdBinary()` located in the module `src/threshold.cpp`. This function takes the undistorted input image and applies multiple thresholding operations to extract lane-relevant pixels.
@@ -44,8 +44,7 @@ To improve robustness under shadows and uneven illumination, the thresholding st
 
 An example of the resulting binary image is shown below.
 
-![Binary image example](output/images/test1/binary.jpg)
-
+![Binary image example](docs/assets/pipeline-stages/02-binary.jpg)
 
 A perspective (bird’s-eye view) transform is applied to the thresholded binary image to simplify lane detection.
 This step is implemented in the function `warpPerspectiveBinary()` located in the module `src/pipeline.cpp`. 
@@ -53,8 +52,7 @@ The source points define a trapezoidal region around the lane in the original ca
 
 An example of the perspective-transformed (warped) binary image is shown below.
 
-![Perspective transform example](output/images/test1/warped_binary.jpg)
-
+![Perspective transform example](docs/assets/pipeline-stages/03-warped-binary.jpg)
 
 Lane-line pixels are identified in the warped binary image using a histogram + sliding-window search, and the lane boundaries are then fit with a 2nd-order polynomial.
 
@@ -68,6 +66,16 @@ Lane pixel detection and polynomial fitting are implemented in the function `det
 
 The lane detection stage is called from the main frame-processing function `processFrame()` in `src/pipeline.cpp`, which passes the warped binary image into `detectLane()` and then uses the fitted polynomials for lane visualization and further metrics.
 
+### Intermediate Stage Gallery
+
+The following images show the main processing stages for one test frame.
+
+| Stage | Output |
+|---|---|
+| Undistorted frame | ![Undistorted frame](docs/assets/pipeline-stages/01-undistorted.jpg) |
+| Binary threshold | ![Binary threshold](docs/assets/pipeline-stages/02-binary.jpg) |
+| Bird's-eye binary view | ![Warped binary view](docs/assets/pipeline-stages/03-warped-binary.jpg) |
+| Final lane overlay | ![Final lane overlay](docs/assets/pipeline-stages/04-final-overlay.jpg) |
 
 The radius of curvature of the lane and the vehicle position with respect to the lane center are computed after fitting second-order polynomials to the detected left and right lane lines.
 
@@ -78,7 +86,7 @@ Vehicle offset from lane center is computed in `computeVehicleOffset()` in `src/
 
 An example image of the final result is shown below, where the detected lane boundaries are projected back onto the original road image and the lane area is highlighted clearly.
 
-![Final lane detection result](output/images/test1/result.jpg)
+![Final lane detection result](docs/assets/pipeline-stages/04-final-overlay.jpg)
 
 ### Pipeline (video)
 
