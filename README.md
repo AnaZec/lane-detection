@@ -31,7 +31,6 @@ The demo below shows the processed video output with the detected lane area, est
 
 The processing flow is:
 
-````md
 ```mermaid
 flowchart TD
     A[Raw camera frame] --> B[Camera calibration data]
