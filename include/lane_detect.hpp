@@ -12,6 +12,8 @@ struct LaneState {
     bool hasPrev = false;
     cv::Vec3d leftPrev;
     cv::Vec3d rightPrev;
+
+    double smoothingAlpha = 0.25;
 };
 
 LaneFit detectLane(const cv::Mat& warpedBinary, LaneState& state,
