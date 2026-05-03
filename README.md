@@ -59,7 +59,8 @@ Lane pixel detection and polynomial fitting are implemented in the function `det
 - collects all non-zero pixels using `cv::findNonZero`,
 - runs a vertical sliding-window scan (with parameters `nwindows`, `margin`, `minpix`) to accumulate left/right lane pixel coordinates and recenters each window based on the mean x-position of pixels found in the window,
 - fits a 2nd-order polynomial `x = A*y^2 + B*y + C` for the left and right lanes using the helper function `polyfit_x_of_y()` (also in `src/lane_detect.cpp`),
-- applies geometric sanity checks, including left/right lane ordering, minimum and maximum lane-width bounds, lane-width consistency across the image, and curvature-coefficient similarity between the two fitted lane lines.
+- applies geometric sanity checks, including left/right lane ordering, minimum and maximum lane-width bounds, lane-width consistency across the image, and curvature-coefficient similarity between the two fitted lane lines
+- falls back to the previous valid lane fit when the current frame fails validation, preventing a single bad frame from causing an immediate failure overlay in video output
 
 The lane detection stage is called from the main frame-processing function `processFrame()` in `src/pipeline.cpp`, which passes the warped binary image into `detectLane()` and then uses the fitted polynomials for lane visualization and further metrics.
 
