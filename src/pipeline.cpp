@@ -54,45 +54,6 @@ cv::Mat processFrame(const cv::Mat& frame, PipelineState& state) {
         return c[0]*y*y + c[1]*y + c[2];
     };
 
-    auto curvatureMeters = [&](const cv::Vec3d& fitPix,
-                               int imgH,
-                               double xm_per_pix,
-                               double ym_per_pix) -> double {
-        // sample and refit x(y) in meters: x_m = A*y_m^2 + B*y_m + C
-        std::vector<double> ys_m, xs_m;
-        ys_m.reserve(imgH / 10 + 2);
-        xs_m.reserve(imgH / 10 + 2);
-
-        for (int y = 0; y < imgH; y += 10) {
-            double x_pix = evalPoly(fitPix, (double)y);
-            ys_m.push_back(y * ym_per_pix);
-            xs_m.push_back(x_pix * xm_per_pix);
-        }
-
-        cv::Mat A((int)ys_m.size(), 3, CV_64F);
-        cv::Mat b((int)ys_m.size(), 1, CV_64F);
-
-        for (int i = 0; i < (int)ys_m.size(); i++) {
-            double y = ys_m[i];
-            A.at<double>(i, 0) = y * y;
-            A.at<double>(i, 1) = y;
-            A.at<double>(i, 2) = 1.0;
-            b.at<double>(i, 0) = xs_m[i];
-        }
-
-        cv::Mat x;
-        if (!cv::solve(A, b, x, cv::DECOMP_SVD)) return 1e12;
-
-        double A_m = x.at<double>(0,0);
-        double B_m = x.at<double>(1,0);
-
-        double y_eval_m = (imgH - 1) * ym_per_pix;
-        if (std::abs(A_m) < 1e-12) return 1e12;
-
-        double term = 2.0 * A_m * y_eval_m + B_m;
-        return std::pow(1.0 + term * term, 1.5) / std::abs(2.0 * A_m);
-    };
-
     // undistort
     cv::Mat undist = undistortImage(frame, state.calib);
 
