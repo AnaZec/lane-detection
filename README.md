@@ -182,6 +182,17 @@ When a previous valid fit exists, the current frame's polynomial coefficients ar
 
 If the current frame fails validation but a previous valid lane fit exists, the pipeline reuses the previous fit instead of immediately showing a failure message.
 
+## Key Challenges
+
+This project uses a classical computer vision pipeline, so the quality of the final lane estimate depends strongly on the quality of the binary lane mask and the stability of the fitted lane model.
+
+| Challenge | Affected stage | How it is handled |
+|---|---|---|
+| Uneven lighting and shadows | Binary thresholding | The thresholding stage applies CLAHE to the HLS lightness channel before generating white/yellow color masks and Sobel-x gradient masks. This improves local contrast in darker road regions, but extreme shadows can still hide lane markings. |
+| Worn or partially missing lane markings | Lane pixel detection | The sliding-window search can still fit a lane when enough lane pixels remain visible. However, if too many pixels are missing, the polynomial fit may become unstable and is rejected by geometric sanity checks. |
+| Occlusions by vehicles or road objects | Polynomial fitting and validation | Temporary occlusions can interrupt the detected lane pixels. The pipeline reduces visible instability by smoothing valid fits across frames and falling back to the previous valid fit when the current frame fails validation. |
+| False positives from road texture or bright objects | Binary thresholding and sanity checks | Color and gradient masks may sometimes detect non-lane features. Geometric sanity checks reject fits with implausible lane width, inconsistent width across the frame, or mismatched left/right curvature. |
+
 ## Project Structure
 
 ```text
