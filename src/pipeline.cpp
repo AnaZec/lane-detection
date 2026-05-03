@@ -66,6 +66,15 @@ cv::Mat processFrame(const cv::Mat& frame, PipelineState& state) {
     // detect lane
     LaneFit fit = detectLane(warped, state.laneState, 9, 100, 50);
 
+    bool usedFallback = false;
+
+    if (!fit.valid && state.laneState.hasPrev) {
+        fit.left = state.laneState.leftPrev;
+        fit.right = state.laneState.rightPrev;
+        fit.valid = true;
+        usedFallback = true;
+    }
+
     // prepare outputs for saving (only valid if fit.valid)
     cv::Mat laneWarp, laneUnwarped;
 
@@ -121,6 +130,11 @@ cv::Mat processFrame(const cv::Mat& frame, PipelineState& state) {
                     {40,40}, cv::FONT_HERSHEY_SIMPLEX, 1, {0,255,0}, 2);
         cv::putText(out, "Offset: " + std::to_string(offset_m) + " m",
                     {40,80}, cv::FONT_HERSHEY_SIMPLEX, 1, {0,255,0}, 2);
+
+        if (usedFallback) {
+            cv::putText(out, "Using previous lane fit", {40,120},
+            cv::FONT_HERSHEY_SIMPLEX, 0.8, {0,255,255}, 2);
+        }
     }
 
     // save intermediates per-image (only if output_dir is set)
