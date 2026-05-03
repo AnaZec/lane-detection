@@ -31,9 +31,6 @@ The demo below shows the processed video output with the detected lane area, est
 
 The processing flow is:
 
-
-with this:
-
 ````md
 ```mermaid
 flowchart TD
