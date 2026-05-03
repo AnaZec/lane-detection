@@ -32,8 +32,11 @@ An example of a distortion-corrected image is shown below.
 ![Distortion-corrected_image](output/images/test1/undistorted.jpg)
 
 To create a thresholded binary image highlighting lane markings, a combination of color-based and gradient-based methods is used.
-This step is implemented in the function `createBinaryImage()` located in the module `src/pipeline.cpp`. This function takes the undistorted input image and applies multiple thresholding operations to extract lane-relevant pixels.
-Within `createBinaryImage()`, the image is converted into different color spaces to emphasize white and yellow lane markings under varying illumination conditions. In parallel, Sobel gradients are computed in the x-direction to detect strong vertical edges corresponding to lane boundaries. The resulting color masks and gradient masks are then combined into a single binary image.
+This step is implemented in the function `thresholdBinary()` located in the module `src/threshold.cpp`. This function takes the undistorted input image and applies multiple thresholding operations to extract lane-relevant pixels.
+
+Within `thresholdBinary()`, the image is converted into different color spaces to emphasize white and yellow lane markings under varying illumination conditions. In parallel, Sobel gradients are computed in the x-direction to detect strong vertical edges corresponding to lane boundaries. The resulting color masks and gradient masks are then combined into a single binary image.
+
+To improve robustness under shadows and uneven illumination, the thresholding stage applies CLAHE to the HLS lightness channel before generating color and gradient masks. This locally normalizes contrast so lane markings remain more visible in darker road regions while preserving the existing white/yellow lane detection logic.
 
 An example of the resulting binary image is shown below.
 
@@ -85,37 +88,11 @@ The main challenges encountered during implementation were varying lighting cond
 
 The pipeline is most likely to fail in situations with strong shadows, abrupt illumination changes, heavy occlusions by other vehicles, or non-standard lane markings. In such cases, the sliding-window search and polynomial fitting may produce unstable or incorrect lane estimates.
 
-To improve robustness, adaptive or illumination-aware thresholding techniques could be used.
+The current pipeline improves robustness by applying CLAHE-based illumination normalization before thresholding. Further improvements could include dynamically tuned threshold ranges, shadow-specific masking, or learning-based lane segmentation.
+
 More advanced approaches, such as learning-based lane detection methods, could further improve performance in challenging road and lighting conditions.
 
 ### Other results
 
 All input images and videos are tested as well, final results are available at the following link:
 https://drive.google.com/file/d/19Dg-dA0cYWxRH6yDHZzJ2oJLJajfDf5L/view?usp=drive_link
-
-## Dependencies
-
-This project is written in C++ and uses OpenCV for image processing and computer vision operations.
-
-Required dependencies:
-
-- C++17-compatible compiler
-- CMake 3.10 or newer
-- OpenCV 4.x
-
-On Ubuntu/Debian-based systems, OpenCV and CMake can be installed with:
-
-```bash
-sudo apt update
-sudo apt install build-essential cmake libopencv-dev
-```
-
-## Build
-
-Create a clean build directory and compile the project with CMake:
-
-```bash
-mkdir -p build
-cd build
-cmake ..
-make
