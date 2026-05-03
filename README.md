@@ -6,6 +6,8 @@ The project demonstrates a classical computer vision perception pipeline similar
 
 ## Demo
 
+The demo below shows the processed video output with the detected lane area, estimated curvature, and vehicle offset overlaid on each frame.
+
 ![Lane detection demo](docs/assets/lane-detection-demo.gif)
 
 ## Features
