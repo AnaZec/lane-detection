@@ -112,12 +112,12 @@ Curvature is computed from the fitted polynomial coefficients after converting p
 
 ### Example Curvature and Offset Output
 
-For one processed test frame, the pipeline reports values similar to:
+For one processed test frame, the pipeline reports:
 
 | Output | Example value | Meaning |
 |---|---:|---|
-| Lane curvature | `REPLACE_WITH_VALUE m` | Estimated radius of curvature of the detected lane. A larger value means the road is closer to straight; a smaller value means a sharper curve. |
-| Vehicle offset | `REPLACE_WITH_VALUE m` | Estimated lateral displacement of the vehicle from the lane center. A positive value means the vehicle is to the right of the detected lane center; a negative value means it is to the left. |
+| Lane curvature | `1597 m` | Estimated radius of curvature of the detected lane. A larger value means the road is closer to straight; a smaller value means a sharper curve. |
+| Vehicle offset | `-0.27 m` | Estimated lateral displacement of the vehicle from the lane center. In this project, a negative value means the vehicle is left of the detected lane center, while a positive value means it is right of the lane center. |
 
 These values are approximate geometry estimates derived from the detected lane polynomials. They are intended to provide a useful interpretation of the lane geometry, not high-precision vehicle localization.
 
