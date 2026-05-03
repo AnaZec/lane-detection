@@ -11,6 +11,10 @@ The goals / steps of this project are the following:
 * Warp the detected lane boundaries back onto the original image.
 * Output visual display of the lane boundaries and numerical estimation of lane curvature and vehicle position.
 
+## Demo
+
+![Lane detection demo](docs/assets/lane-detection-demo.gif)
+
 ### Writeup / README
 
 ### Camera Calibration
@@ -78,9 +82,9 @@ An example image of the final result is shown below, where the detected lane bou
 
 ### Pipeline (video)
 
-The final video output produced by the pipeline can be found at the following location:
+The pipeline processes video frame-by-frame and overlays the detected lane area, estimated lane curvature, and vehicle lateral offset.
 
-![Final lane detection video](output/videos/overlay/project_video01_out.avi)
+![Lane detection demo](docs/assets/lane-detection-demo.gif)
 
 
 ### Discussion
@@ -95,5 +99,4 @@ More advanced approaches, such as learning-based lane detection methods, could f
 
 ### Other results
 
-All input images and videos are tested as well, final results are available at the following link:
-https://drive.google.com/file/d/19Dg-dA0cYWxRH6yDHZzJ2oJLJajfDf5L/view?usp=drive_link
+Additional generated outputs are stored locally under `output/` when running the pipeline. The `output/` directory is intentionally ignored by Git to keep the repository lightweight.
