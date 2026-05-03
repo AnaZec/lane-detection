@@ -117,14 +117,52 @@ LaneFit detectLane(const cv::Mat& warpedBinary, LaneState& state,
         return fit;
     }
 
-    // simple sanity: right should be to the right of left near bottom
-    double yEval = warpedBinary.rows - 1.0;
-    auto evalX = [&](const cv::Vec3d& c) {
-        return c[0]*yEval*yEval + c[1]*yEval + c[2];
+    // Lane geometry sanity checks.
+    // The detector should reject polynomial fits that are geometrically implausible
+    // instead of blindly accepting every sliding-window result
+    const double yTop = 0.0;
+    const double yMid = warpedBinary.rows * 0.5;
+    const double yBottom = warpedBinary.rows - 1.0;
+
+    auto evalX = [](const cv::Vec3d& c, double y) {
+        return c[0] * y * y + c[1] * y + c[2];
     };
-    double lx = evalX(leftFit);
-    double rx = evalX(rightFit);
-    if (rx <= lx + 200) { // lane width sanity in px (rough)
+
+    const double leftTop = evalX(leftFit, yTop);
+    const double rightTop = evalX(rightFit, yTop);
+    const double leftMid = evalX(leftFit, yMid);
+    const double rightMid = evalX(rightFit, yMid);
+    const double leftBottom = evalX(leftFit, yBottom);
+    const double rightBottom = evalX(rightFit, yBottom);
+
+    const double widthTop = rightTop - leftTop;
+    const double widthMid = rightMid - leftMid;
+    const double widthBottom = rightBottom - leftBottom;
+
+    constexpr double minLaneWidthPx = 350.0;
+    constexpr double maxLaneWidthPx = 900.0;
+    constexpr double maxWidthVariationPx = 250.0;
+    constexpr double maxCurvatureCoeffDiff = 0.001;
+
+    const bool validOrdering =
+        widthTop > 0.0 &&
+        widthMid > 0.0 &&
+        widthBottom > 0.0;
+
+    const bool validWidth =
+        widthBottom >= minLaneWidthPx &&
+        widthBottom <= maxLaneWidthPx &&
+        widthMid >= minLaneWidthPx &&
+        widthMid <= maxLaneWidthPx;
+
+    const bool stableWidth =
+        std::abs(widthBottom - widthMid) <= maxWidthVariationPx &&
+        std::abs(widthMid - widthTop) <= maxWidthVariationPx;
+
+    const bool similarCurvature =
+        std::abs(leftFit[0] - rightFit[0]) <= maxCurvatureCoeffDiff;
+
+    if (!(validOrdering && validWidth && stableWidth && similarCurvature)) {
         fit.valid = false;
         return fit;
     }
