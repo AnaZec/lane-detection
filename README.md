@@ -58,6 +58,8 @@ flowchart TD
     Q --> R[Final lane overlay]
 ```
 
+The source for this diagram is also stored in [`docs/diagrams/pipeline.mmd`](docs/diagrams/pipeline.mmd).
+
 ## Camera Calibration
 
 Camera calibration is performed using multiple images of a chessboard pattern.
