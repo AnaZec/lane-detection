@@ -280,10 +280,11 @@ Generated image outputs are written under `output/`.
 ./build/lane_finding --video input_video.mp4 output_video.avi
 ```
 
-Example:
+Example with a local test video:
 
 ```bash
-./build/lane_finding --video test_videos/project_video01.mp4 output/videos/overlay/project_video01_out.avi
+mkdir -p output/videos/overlay
+./build/lane_finding --video path/to/input_video.mp4 output/videos/overlay/project_video01_out.avi
 ```
 
 ## Batch Run
@@ -311,15 +312,16 @@ The `output/` directory is intentionally ignored by Git. Selected visual assets 
 
 ## Limitations
 
-This is a classical computer vision pipeline, so it can still struggle with:
+This is a classical computer vision pipeline, so its performance depends strongly on image quality, lane visibility, and road geometry.
 
-- heavy shadows,
-- worn or missing lane markings,
-- unusual lane colors,
-- strong glare,
-- occlusions by vehicles,
-- complex road geometry,
-- lane merges or exits.
+Known limitations include:
+
+- **Fixed camera perspective assumptions:** the perspective transform is tuned for the provided road view and may not generalize to different camera placements or road scenes without recalibration.
+- **Classical thresholding sensitivity:** CLAHE improves robustness, but the pipeline can still struggle with extreme shadows, glare, overexposure, or unusual lane colors.
+- **Dependence on visible lane markings:** worn, missing, occluded, or highly curved lane markings can reduce the number of reliable pixels available for polynomial fitting.
+- **Single-camera input:** the pipeline uses only monocular image input and does not use depth, radar, lidar, map data, or vehicle motion information.
+- **No learning-based semantic understanding:** the detector does not use a trained segmentation model, so it may confuse bright road texture, lane-like markings, or nearby edges with actual lane boundaries.
+- **Limited scene coverage:** the approach is best suited for structured highway-like scenes and is not designed for complex intersections, lane merges, construction zones, or unmarked roads.
 
 The current implementation improves robustness with CLAHE normalization, geometric validation, temporal smoothing, and fallback behavior, but it is not a replacement for a production-grade autonomy perception system.
 
@@ -327,14 +329,14 @@ The current implementation improves robustness with CLAHE normalization, geometr
 
 Possible improvements include:
 
-- dynamic threshold tuning based on scene brightness,
-- stronger shadow-specific masking,
-- configurable pipeline parameters,
-- test coverage for lane validation logic,
-- real-time performance profiling,
-- ROS 2 integration,
-- camera-device input support,
-- learning-based lane segmentation for difficult scenes.
+- **Configurable pipeline parameters:** expose threshold ranges, perspective points, sanity-check bounds, and smoothing factors through a configuration file or CLI options.
+- **Dynamic threshold tuning:** adapt color and gradient thresholds based on scene brightness, contrast, and shadow conditions.
+- **Stronger temporal tracking:** track lane fits over time with confidence scores, missed-frame counters, and reset logic for long detection failures.
+- **Quantitative evaluation:** add metrics for lane stability, frame-to-frame jitter, processing time, and failure rate across image/video sequences.
+- **Unit and regression tests:** add tests for polynomial fitting, sanity-check rejection, fallback behavior, and vehicle offset calculation.
+- **Live camera input support:** extend the pipeline to process frames from a camera device or video stream.
+- **Learning-based segmentation:** compare the classical pipeline with a CNN-based lane segmentation model for difficult lighting, occlusion, and worn-marking scenarios.
+- **ROS 2 integration:** wrap the pipeline as a perception node that publishes lane geometry and debug images.
 
 ## Why This Project Matters
 
