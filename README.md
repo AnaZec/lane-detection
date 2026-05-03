@@ -258,38 +258,48 @@ The executable is generated inside the `build/` directory.
 
 ## Usage
 
+The executable supports three modes:
+
+```text
+./build/lane_finding --calibrate
+./build/lane_finding --image <path_to_image>
+./build/lane_finding --video <input_video> <output_video.avi>
+```
+
 ### Camera Calibration
+
+Run camera calibration using the chessboard images in `camera_cal/`:
 
 ```bash
 ./build/lane_finding --calibrate
 ```
 
-This computes the camera calibration parameters from the chessboard images and saves the calibration data for later use.
+This computes the camera matrix and distortion coefficients and saves the calibration data for later image and video processing.
 
 ### Process a Single Image
+
+Run the lane detection pipeline on one image:
 
 ```bash
 ./build/lane_finding --image test_images/test1.jpg
 ```
 
-Generated image outputs are written under `output/`.
+This processes the input image, applies the full lane detection pipeline, and writes generated outputs under `output/`.
 
 ### Process a Video
 
-```bash
-./build/lane_finding --video input_video.mp4 output_video.avi
-```
-
-Example with a local test video:
+Run the pipeline frame-by-frame on a local video file:
 
 ```bash
 mkdir -p output/videos/overlay
-./build/lane_finding --video path/to/input_video.mp4 output/videos/overlay/project_video01_out.avi
+./build/lane_finding --video ~/Videos/project_video01.mp4 output/videos/overlay/project_video01_out.avi
 ```
 
-## Batch Run
+The input video path should point to a local video file on your machine. The output path specifies where the processed `.avi` video should be written.
 
-The repository includes a helper script for running calibration and sample image/video processing:
+### Batch Run
+
+The repository also includes a helper script that runs calibration and sample image/video processing:
 
 ```bash
 bash run_batch.sh
