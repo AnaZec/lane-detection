@@ -10,6 +10,8 @@ The demo below shows the processed video output with the detected lane area, est
 
 ![Lane detection demo](docs/assets/lane-detection-demo.gif)
 
+For a detailed visual breakdown of image outputs, validation cases, and challenging-video observations, see [Results](docs/results.md).
+
 ## Features
 
 - Camera calibration from chessboard images
